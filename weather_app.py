@@ -1,7 +1,9 @@
 import sys
+import threading
+
 from PyQt5 import uic
 from PyQt5.QtCore import QThread
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import *
 
 from bs4 import BeautifulSoup
@@ -16,6 +18,7 @@ class WeatherCrawler(QThread): # 쓰레드 클래스로 선언
 
     def weather_crawling(self, weather_area):
         weather_result = [] # 날씨 크롤링 결과를 반환할 빈리스트 생성
+        result_flag = 0
 
         weather_html = requests.get(f'https://search.naver.com/search.naver?query={weather_area}날씨')
         # print(weather_html) # 200 응답코드 확인
@@ -43,6 +46,7 @@ class WeatherCrawler(QThread): # 쓰레드 클래스로 선언
             dust_info = weather_soup.find_all('span', {'class': 'txt'})  # 미세먼지 정보
             dust1 = dust_info[0].text  # 미세먼지
             dust2 = dust_info[1].text  # 초미세먼지
+            result_flag = 1
         except:
             # 해외 도시 검색시 크롤링될 태그 정의
             try:
@@ -56,6 +60,7 @@ class WeatherCrawler(QThread): # 쓰레드 클래스로 선언
                 today_rain = '-'
                 dust1 = '-'
                 dust2 = '-'
+                result_flag = 2
             except:
                 area_title = '검색한 지역은 날씨정보 없음'
                 today_temper = '-'
@@ -64,6 +69,7 @@ class WeatherCrawler(QThread): # 쓰레드 클래스로 선언
                 today_rain = '-'
                 dust1 = '-'
                 dust2 = '-'
+                result_flag = 0
 
         weather_result.append(area_title)
         weather_result.append(today_temper)
@@ -72,6 +78,7 @@ class WeatherCrawler(QThread): # 쓰레드 클래스로 선언
         weather_result.append(today_rain)
         weather_result.append(dust1)
         weather_result.append(dust2)
+        weather_result.append(result_flag)
 
         return weather_result
 
@@ -87,15 +94,53 @@ class WeatherApp(QMainWindow, form_class):
         self.weatherInfo = WeatherCrawler(self) # 날씨크롤러 클래스의 객체를 생성
 
         self.search_button.clicked.connect(self.weather_start)
+        self.search_button.clicked.connect(self.reflash_function)
+
+    def closeEvent(self):
+        self.weatherInfo.close()
+
+    def reflash_function(self): # 600초 마다 날씨를 다시 호출
+        self.weather_start()
+        threading.Timer(600, self.reflash_function).start()
 
     def weather_start(self):
         input_area = self.area_input.text() # 입력된 지역명 가져오기
-        weather_data = self.weatherInfo.weather_crawling(input_area)
-        # 쓰레드 클래스의 weather_crawling 메서드 호출
-        # weather_crawling 함수의 리턴값 저장(크롤링한 날씨 정보 리스트)
-        # ['남동구 구월동', '3°', '맑음', '어제보다 4° 높아요', '0%', '좋음', '좋음']
-        self.temper_label.setText(weather_data[1])
+        if input_area == '':
+            QMessageBox.about(self, '입력오류!','날씨 검색 지역명을 입력하지 않으셨습니다.')
+        else:
+            weather_data = self.weatherInfo.weather_crawling(input_area)
+            # 쓰레드 클래스의 weather_crawling 메서드 호출
+            # weather_crawling 함수의 리턴값 저장(크롤링한 날씨 정보 리스트)
+            # ['남동구 구월동', '3°', '맑음', '어제보다 4° 높아요', '0%', '좋음', '좋음', 1]
+            self.temper_label.setText(weather_data[1])
+            self.area_label.setText(weather_data[0])
+            # self.weather_label.setText(weather_data[2])
+            if weather_data[2] == '맑음':
+                weather_image = QPixmap('img/sun.png')
+                self.weather_label.setPixmap(QPixmap(weather_image))
+            elif weather_data[2] == '흐림':
+                weather_image = QPixmap('img/cloud.png')
+                self.weather_label.setPixmap(QPixmap(weather_image))
+            elif weather_data[2] == '비':
+                weather_image = QPixmap('img/rain.png')
+                self.weather_label.setPixmap(QPixmap(weather_image))
+            elif weather_data[2] == '눈':
+                weather_image = QPixmap('img/snow.png')
+                self.weather_label.setPixmap(QPixmap(weather_image))
+            elif weather_data[2] == '구름많음':
+                weather_image = QPixmap('img/cloud.png')
+                self.weather_label.setPixmap(QPixmap(weather_image))
+            else:
+                self.weather_label.setText(weather_data[2])
 
+            self.yesterday_label.setText(weather_data[3])
+            self.rain_label.setText(weather_data[4])
+            self.dust1_label.setText(weather_data[5])
+            self.dust2_label.setText(weather_data[6])
+            if weather_data[7] == 0:
+                QMessageBox.about(self, '지역명오류!', '입력하신 지역명을 다시 확인하시기 바랍니다.')
+            elif weather_data[7] == 2:
+                QMessageBox.about(self, '해외지역검색', '해외의 지역은 강수확률, 미세먼지, 초미세먼지 정보가 제공되지 않습니다.')
 
 
 
