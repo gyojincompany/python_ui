@@ -100,8 +100,8 @@ class WeatherApp(QMainWindow, form_class):
         self.weatherInfo.close()
 
     def reflash_function(self): # 600초 마다 날씨를 다시 호출
-        self.weather_start()
-        threading.Timer(600, self.reflash_function).start()
+        # self.weather_start()
+        threading.Timer(600, self.weather_start).start()
 
     def weather_start(self):
         input_area = self.area_input.text() # 입력된 지역명 가져오기
