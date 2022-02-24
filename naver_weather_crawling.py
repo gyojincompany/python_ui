@@ -55,12 +55,23 @@ except:
         dust1 = '-'
         dust2 = '-'
 
+weather_result = []
+weather_result.append(area_title)
+weather_result.append(today_temper)
+weather_result.append(today_weather)
+weather_result.append(yesterday_weather)
+weather_result.append(today_rain)
+weather_result.append(dust1)
+weather_result.append(dust2)
+
+print(weather_result)
+
 print('******** 오늘의 날씨 정보 ********')
-print('검색지역:', area_title)
-print('오늘의 날씨:', today_weather)
-print('어제와의 비교:', yesterday_weather)
-print('오늘의 기온:', today_temper)
-print('강수확률:', today_rain)
-print('미세먼지:', dust1)
-print('초미세먼지:', dust2)
+print('검색지역:', weather_result[0])
+print('오늘의 날씨:', weather_result[2])
+print('어제와의 비교:', weather_result[3])
+print('오늘의 기온:', weather_result[1])
+print('강수확률:', weather_result[4])
+print('미세먼지:', weather_result[5])
+print('초미세먼지:', weather_result[6])
 print('********************************')
